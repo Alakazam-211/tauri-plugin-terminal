@@ -1,0 +1,80 @@
+use serde::Serialize;
+
+/// A style span — defines fg/bg/flags for a range of columns in a line.
+/// Only emitted for cells that differ from default (fg=0xe0e0e0, bg=0x0a0a0a, flags=0).
+#[derive(Serialize, Clone, Debug)]
+pub struct StyleSpan {
+    /// Start column (inclusive).
+    pub s: u16,
+    /// End column (inclusive).
+    pub e: u16,
+    /// Foreground color. Omitted if default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fg: Option<u32>,
+    /// Background color. Omitted if default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bg: Option<u32>,
+    /// Attribute flags. Omitted if 0.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fl: Option<u8>,
+}
+
+/// Attribute flag constants.
+pub const ATTR_BOLD: u8 = 1;
+pub const ATTR_ITALIC: u8 = 2;
+pub const ATTR_UNDERLINE: u8 = 4;
+pub const ATTR_STRIKETHROUGH: u8 = 8;
+pub const ATTR_INVERSE: u8 = 16;
+pub const ATTR_DIM: u8 = 32;
+pub const ATTR_HIDDEN: u8 = 64;
+pub const ATTR_WIDE: u8 = 128;
+
+/// A compact line representation: text content + sparse style spans.
+/// This is ~10-20x smaller than per-cell arrays for typical content.
+#[derive(Serialize, Clone, Debug)]
+pub struct CompactLine {
+    /// Row index (0 = top of visible area).
+    pub row: u16,
+    /// Plain text content of the line (trimmed trailing spaces).
+    pub text: String,
+    /// Style spans for non-default cells. Empty array = all default styling.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub spans: Vec<StyleSpan>,
+}
+
+/// A grid update sent from Rust → frontend via Tauri event.
+#[derive(Serialize, Clone, Debug)]
+pub struct GridUpdate {
+    pub cols: u16,
+    pub rows: u16,
+    pub cursor_col: u16,
+    pub cursor_row: u16,
+    pub cursor_visible: bool,
+    pub cursor_shape: String,
+    /// Compact lines (text + sparse style spans).
+    pub lines: Vec<CompactLine>,
+    pub full: bool,
+    pub mode: u32,
+    /// Current scroll offset (0 = bottom, >0 = scrolled up into history).
+    pub display_offset: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub selection: Option<[u16; 4]>,
+}
+
+/// Selection action sent from frontend → Rust.
+#[derive(serde::Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub enum SelectionAction {
+    Start,
+    Update,
+    End,
+}
+
+/// Selection request from the frontend.
+#[derive(serde::Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SelectionRequest {
+    pub action: SelectionAction,
+    pub col: u16,
+    pub row: u16,
+}
