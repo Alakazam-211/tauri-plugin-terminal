@@ -9,7 +9,7 @@
 //!
 //! ## Quick Start
 //!
-//! ```rust
+//! ```rust,ignore
 //! fn main() {
 //!     tauri::Builder::default()
 //!         .plugin(tauri_plugin_terminal::init())
@@ -21,6 +21,9 @@
 mod backend;
 mod commands;
 pub mod grid_types;
+
+#[cfg(test)]
+mod tests;
 
 pub use backend::TerminalManager;
 
@@ -38,9 +41,11 @@ pub struct TerminalState {
 /// Initialize the terminal plugin.
 ///
 /// Call this in your Tauri builder:
-/// ```rust
+/// ```rust,ignore
 /// tauri::Builder::default()
 ///     .plugin(tauri_plugin_terminal::init())
+///     .run(tauri::generate_context!())
+///     .expect("error");
 /// ```
 pub fn init() -> TauriPlugin<Wry> {
     // Ignore SIGPIPE at process startup so writing to a dead PTY returns EPIPE
